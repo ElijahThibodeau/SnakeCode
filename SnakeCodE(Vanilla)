@@ -1,0 +1,202 @@
+import pygame, sys, random
+from pygame.locals import *
+
+DEBUG = True
+
+FPS = 10
+WINDOWWIDTH = 600
+WINDOWHEIGHT = 600
+BOARDWIDTH = 20  # number of boxes in a row
+BOARDHEIGHT = 20  # number of boxes in a column
+BOXWIDTH = int(WINDOWWIDTH / BOARDWIDTH)
+BOXHEIGHT = int(WINDOWHEIGHT / BOARDHEIGHT)
+FPSCLOCK = pygame.time.Clock()
+GAPSIZE = 1
+
+DISPLAYSURF = pygame.display.set_mode((WINDOWWIDTH, WINDOWHEIGHT), RESIZABLE)
+pygame.init()
+BERRYIMG = pygame.transform.scale(pygame.image.load("berry.png"), (BOXWIDTH, BOXHEIGHT))
+BERRYIMG.set_colorkey((250, 250, 250))
+BOXCOLOR = (200, 200, 200)
+OUTLINELT = (230, 230, 230)
+OUTLINEDK = (100, 100, 100)
+RED = (250, 0, 0)
+GAMEENDIMG = pygame.transform.scale(pygame.image.load('gameEndImage.jpg'), (420, 269))
+snakes = [(10, 10), (10, 11), (10, 12)]
+berryCoords = (random.randint(0, BOARDWIDTH - 1), random.randint(0, BOARDHEIGHT - 1))
+
+FRAMECOUNT = 0
+font = pygame.font.Font(None, 40)
+inp = 3
+keyPressed = False
+
+def main():
+   global WINDOWWIDTH, WINDOWHEIGHT, BOXWIDTH, BOXHEIGHT, DISPLAYSURF, inp, DISTPERFRAMEX, DISTPERFRAMEY,keyPressed, snakes
+   snakes = [(10, 10), (10, 11), (10, 12)]
+   drawBoard()
+   while True:
+       for event in pygame.event.get():
+           # event handling loop
+           if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
+               pygame.quit()
+               sys.exit()
+           if event.type == pygame.VIDEORESIZE:
+               WINDOWWIDTH, WINDOWHEIGHT = event.w, event.h
+               update()
+               drawBoard()
+           if event.type == KEYDOWN:
+               if event.key == K_UP:
+                   if inp != 3:
+                       inp = 1
+                       moveSnake(inp)
+                       keyPressed = True
+                   if inp == 3:
+                       inp = 2
+                       moveSnake(inp)
+                       keyPressed = True
+                       inp = 1
+               if event.key == K_RIGHT:
+                   if inp != 4:
+                       inp = 2
+                       moveSnake(inp)
+                       keyPressed = True
+                   else:
+                       inp = 3
+                       moveSnake(inp)
+                       inp = 2
+               if event.key == K_DOWN:
+                   if inp != 1:
+                       inp = 3
+                       moveSnake(inp)
+                       keyPressed = True
+                   else:
+                       inp = 4
+                       moveSnake(inp)
+                       inp = 3
+               if event.key == K_LEFT:
+                   if inp != 2:
+                       inp = 4
+                       moveSnake(inp)
+                       keyPressed = True
+                   else:
+                       inp = 1
+                       moveSnake(inp)
+                       inp = 4
+       if not keyPressed:
+           moveSnake(inp)
+       keyPressed = False
+
+def moveSnake(inp):
+   global snakes, FPSCLOCK, FPS, berryCoords
+   eraseSnakeBody()
+   tempSnakes = []
+   for snake in snakes:
+       tempSnakes.append(snake)
+   tempSnakes.pop(len(tempSnakes)-1)
+   headx, heady = snakes[len(snakes) - 1]
+   if (not headx in range(0, BOARDWIDTH) or not heady in range(0, BOARDHEIGHT)) or (headx, heady) in tempSnakes:
+       endGame()
+   if (inp == 1):
+       snakes.append((headx, heady - 1))
+   if (inp == 2):
+       snakes.append((headx + 1, heady))
+   if (inp == 3):
+       snakes.append((headx, heady + 1))
+   if (inp == 4):
+       snakes.append((headx - 1, heady))
+   if (snakes[len(snakes) - 1] != berryCoords):
+       snakes.pop(0)
+   else:
+       addBerry()
+   drawSnakeBody()
+   FPSCLOCK.tick(FPS)
+
+
+def leftTopCoordsOfBox(l, t):
+   return l * BOXWIDTH, t * BOXHEIGHT
+
+
+def rightBottomCoordsOfBox(r, b):
+   return (r + 1) * BOXWIDTH, (b + 1) * BOXHEIGHT
+
+
+def drawBoard():
+   for i in range(0, BOARDWIDTH):
+       for j in range(0, BOARDHEIGHT):
+           drawBlankTile(i, j)
+   drawBerry()
+   pygame.display.update()
+
+
+def drawBerry():
+   global berryCoords
+   i,j = berryCoords
+   (left, top) = leftTopCoordsOfBox(i, j)
+   DISPLAYSURF.blit(BERRYIMG, (left, top))
+   pygame.display.update()
+
+
+def update():
+   global BOXWIDTH, BOXHEIGHT, DISTPERFRAMEX, DISTPERFRAMEY, DISPLAYSURF
+   DISPLAYSURF = pygame.display.set_mode((WINDOWWIDTH, WINDOWHEIGHT), RESIZABLE)
+   BOXWIDTH = WINDOWWIDTH / BOARDWIDTH
+   BOXHEIGHT = WINDOWHEIGHT / BOARDHEIGHT
+
+
+def drawSnakeBody():
+   for i in range(0, len(snakes)):
+       x, y = snakes[i]
+       drawSnakeTile(x, y)
+   pygame.display.update()
+
+
+def eraseSnakeBody():
+   for i in range(0, len(snakes)):
+       x, y = snakes[i]
+       drawBlankTile(x, y)
+
+
+def drawSnakeTile(i, j):
+   (left, top) = leftTopCoordsOfBox(i, j)
+   pygame.draw.rect(DISPLAYSURF, RED, (left, top, BOXWIDTH, BOXHEIGHT))
+
+
+def drawBlankTile(i, j):  # NOTE: DOES NOT UPDATE DISPLAY!!!!!!!
+   (left, top) = leftTopCoordsOfBox(i, j)
+   (right, bot) = rightBottomCoordsOfBox(i, j)
+   pygame.draw.rect(DISPLAYSURF, BOXCOLOR, (left, top, BOXWIDTH, BOXHEIGHT))
+   pygame.draw.line(DISPLAYSURF, OUTLINEDK, (left, top), (left, bot), 1)
+   pygame.draw.line(DISPLAYSURF, OUTLINEDK, (left, top), (right, top), 1)
+   pygame.draw.line(DISPLAYSURF, OUTLINEDK, (left, bot), (right, bot), 1)
+   pygame.draw.line(DISPLAYSURF, OUTLINEDK, (right, top), (right, bot), 1)
+
+
+def addBerry():
+   global berryCoords, snakes
+   (i,j) = berryCoords
+   drawBlankTile(i,j)
+   while ((i,j) in snakes):
+       berryCoords = (random.randint(0, BOARDWIDTH - 1), random.randint(0, BOARDHEIGHT - 1))
+       (i,j) = berryCoords
+   drawBerry()
+
+def endGame():
+   global snakes, DISPLAYSURF,GAMEENDIMG, font
+   DISPLAYSURF.blit(GAMEENDIMG,(0,0))
+   endIm = font.render(("You got %s berries" %(len(snakes)- 3)), True, (0, 0, 0))
+   DISPLAYSURF.blit(endIm, (0, 100))
+   pygame.display.update()
+   Running = True
+   while Running:
+       for event in pygame.event.get():
+           if event.type == QUIT or (event.type == KEYUP and event.key == K_ESCAPE):
+               pygame.quit()
+               sys.exit()
+           if event.type == KEYDOWN:
+               if event.key == K_r:
+                   Running = False
+                   main()
+
+main()
+
+
